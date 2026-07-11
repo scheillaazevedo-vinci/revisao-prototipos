@@ -1,9 +1,9 @@
 const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhdHVscGhwZ3ljaGd6dHhzdWt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3ODM3NzcsImV4cCI6MjA5OTM1OTc3N30.2Baagi4c5FuwojTls-M6PC0xozxtvHURbQ9ZiAWSVRw';
   const FIGMA_CLIENT_ID = 'pYHM3T2GqInUirsFcjG9y5';
- 
+
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
- 
+
   const state = {
     screen: 'loading',
     session: null,
@@ -19,9 +19,12 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     filterClienteOnly: false,
     filterUnresolvedOnly: false,
     currentNodeId: null,
-    realtimeChannel: null
+    realtimeChannel: null,
+    globalChannel: null,
+    notifications: [],
+    notifDropdownOpen: false
   };
- 
+
   function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
   function showToast(msg){
     const t = document.getElementById('toast');
@@ -30,16 +33,18 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     setTimeout(() => t.classList.remove('show'), 2200);
   }
   function isEquipa(){ return !!state.session; }
- 
+
   // ---------- Arranque ----------
   async function boot(){
     const { data } = await sb.auth.getSession();
     state.session = data.session;
     sb.auth.onAuthStateChange((_event, session) => { state.session = session; });
- 
+
+    if(state.session){ subscribeGlobalNotifications(); }
+
     const params = new URLSearchParams(window.location.search);
     const apresentacaoId = params.get('apresentacao');
- 
+
     if(apresentacaoId){
       await openReview(apresentacaoId);
       return;
@@ -52,7 +57,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     }
     render();
   }
- 
+
   // ---------- Autenticação ----------
   async function loginWithGithub(){
     await sb.auth.signInWithOAuth({
@@ -63,10 +68,67 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
   async function logout(){
     await sb.auth.signOut();
     state.session = null;
+    if(state.globalChannel){ sb.removeChannel(state.globalChannel); state.globalChannel = null; }
+    state.notifications = [];
     state.screen = 'login';
     render();
   }
- 
+
+  // ---------- Notificações ----------
+  function subscribeGlobalNotifications(){
+    if(state.globalChannel){ sb.removeChannel(state.globalChannel); }
+    state.globalChannel = sb.channel('global-client-comments')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments', filter: 'author=eq.cliente' },
+        handleNewClientComment)
+      .subscribe();
+  }
+  async function handleNewClientComment(payload){
+    const row = payload.new;
+    if(state.screen === 'review' && state.currentPresentationId === row.presentation_id) return;
+    const { data } = await sb.from('presentations').select('name, projects(name)').eq('id', row.presentation_id).single();
+    state.notifications.unshift({
+      id: row.id,
+      presentationId: row.presentation_id,
+      presentationName: data?.name || 'Apresentação',
+      projectName: data?.projects?.name || '',
+      text: row.text
+    });
+    updateNotifBell();
+  }
+  function updateNotifBell(){
+    const badge = document.getElementById('notif-badge');
+    if(!badge) return;
+    badge.textContent = state.notifications.length;
+    badge.classList.toggle('hidden', state.notifications.length === 0);
+    renderNotifDropdown();
+  }
+  function toggleNotifDropdown(){
+    state.notifDropdownOpen = !state.notifDropdownOpen;
+    renderNotifDropdown();
+  }
+  function renderNotifDropdown(){
+    const dd = document.getElementById('notif-dropdown');
+    if(!dd) return;
+    dd.classList.toggle('hidden', !state.notifDropdownOpen);
+    if(!state.notifDropdownOpen) return;
+    if(state.notifications.length === 0){
+      dd.innerHTML = '<div class="notif-empty">Sem notificações novas</div>';
+      return;
+    }
+    dd.innerHTML = state.notifications.map((n, i) => `
+      <div class="notif-item" onclick="openNotification(${i})">
+        <div style="font-weight:600;margin-bottom:3px;">${esc(n.projectName)} &rsaquo; ${esc(n.presentationName)}</div>
+        <div style="color:var(--ink-soft);">${esc(n.text.slice(0, 60))}${n.text.length > 60 ? '…' : ''}</div>
+      </div>`).join('');
+  }
+  async function openNotification(i){
+    const n = state.notifications[i];
+    state.notifications.splice(i, 1);
+    state.notifDropdownOpen = false;
+    updateNotifBell();
+    await openReview(n.presentationId);
+  }
+
   // ---------- Projetos ----------
   async function loadProjects(){
     const { data, error } = await sb.from('projects').select('*, presentations(id, status)').order('created_at');
@@ -82,7 +144,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     render();
   }
   function currentProject(){ return state.projects.find(p => p.id === state.currentProjectId); }
- 
+
   const GRADIENT_OPTIONS = [
     ['#2f6fed', '#7fa8f5'],
     ['#7c4dff', '#b39dff'],
@@ -157,7 +219,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     render();
     showToast('Projeto eliminado');
   }
- 
+
   // ---------- Apresentações ----------
   function copyLink(id){
     const base = window.location.origin + window.location.pathname;
@@ -198,7 +260,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     closeModal();
     await openProject(state.currentProjectId);
   }
- 
+
   // ---------- Revisão ----------
   function toEmbedUrl(rawLink){
     try{
@@ -264,7 +326,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     if(el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   function closeAnyPopover(){ const el = document.querySelector('.popover'); if(el) el.remove(); }
- 
+
   function placeComment(ev){
     if(!state.commentMode) return;
     const rect = ev.currentTarget.getBoundingClientRect();
@@ -309,18 +371,18 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     await loadComments();
     updateReviewDynamic();
   }
- 
+
   // ---------- Render ----------
   function render(){
     const backBtn = document.getElementById('back-btn');
     const crumb = document.getElementById('crumb');
-    const topRight = document.getElementById('topbar-right');
+    const topRight = document.getElementById('topbar-actions');
     const topbarEl = document.querySelector('.topbar');
     const pageEl = document.getElementById('page');
     backBtn.classList.add('hidden');
     backBtn.onclick = null;
     topRight.innerHTML = '';
- 
+
     if(state.screen === 'login'){
       topbarEl.style.display = 'none';
       pageEl.className = '';
@@ -328,14 +390,15 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
       return;
     }
     topbarEl.style.display = 'flex';
- 
+    document.getElementById('notif-wrap').classList.toggle('hidden', !isEquipa());
+
     if(state.screen === 'not-found'){
       pageEl.className = 'page';
       crumb.textContent = 'Revisão de protótipos';
       renderNotFound();
       return;
     }
- 
+
     if(state.screen === 'projects'){
       pageEl.className = 'page';
       crumb.textContent = 'Revisão de protótipos';
@@ -370,7 +433,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
       renderReview();
     }
   }
- 
+
   function renderLogin(){
     document.getElementById('page').innerHTML = `
       <div class="split">
@@ -411,7 +474,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
         <p style="font-size:13.5px;color:var(--ink-soft);">Verifique o link recebido ou contacte a equipa responsável.</p>
       </div>`;
   }
- 
+
   function greetingName(){
     const meta = state.session?.user?.user_metadata || {};
     return meta.full_name || meta.name || meta.user_name || state.session?.user?.email?.split('@')[0] || 'equipa';
@@ -440,7 +503,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
       </div>
       <div class="card-grid">${cards}</div>`;
   }
- 
+
   function renderDetail(){
     const project = currentProject();
     const rows = state.presentations.map(pr => {
@@ -473,7 +536,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
       <table><thead><tr><th>Nome</th><th>Data de criação</th><th>Estado</th><th></th></tr></thead>
       <tbody>${rows || '<tr><td colspan="4" style="color:var(--ink-soft);">Ainda não existem apresentações.</td></tr>'}</tbody></table>`;
   }
- 
+
   function openPresentationModal(id){
     const pr = state.presentations.find(p => p.id === id);
     document.getElementById('modal-root').innerHTML = `
@@ -512,7 +575,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     await openProject(state.currentProjectId);
     showToast('Apresentação actualizada');
   }
- 
+
   function renderReview(){
     const p = state.presentation;
     if(p.status === 'inativo' && !isEquipa()){
@@ -531,7 +594,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     }
     updateReviewDynamic();
   }
- 
+
   function renderReviewSkeleton(){
     const p = state.presentation;
     const embedUrl = toEmbedUrl(p.figma_link);
@@ -564,7 +627,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
         </div>
       </div>`;
   }
- 
+
   function toggleFilterCliente(){
     state.filterClienteOnly = !state.filterClienteOnly;
     updateReviewDynamic();
@@ -573,21 +636,23 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     state.filterUnresolvedOnly = document.getElementById('filter-unresolved-input').checked;
     updateReviewDynamic();
   }
- 
+
   function updateReviewDynamic(){
-    const nodeList = state.comments.filter(c => (c.screen_name || null) === (state.currentNodeId || null));
-    const pinsHtml = nodeList.map((c, i) => `<div class="pin" style="left:${c.x}%; top:${c.y}%;" onclick="event.stopPropagation(); selectComment('${c.id}')"><span>${i+1}</span></div>`).join('');
+    const indexMap = new Map(state.comments.map((c, i) => [c.id, i + 1]));
+
+    const nodeList = state.comments.filter(c => (c.screen_name || null) === (state.currentNodeId || null) && !c.resolved);
+    const pinsHtml = nodeList.map(c => `<div class="pin" style="left:${c.x}%; top:${c.y}%;" onclick="event.stopPropagation(); selectComment('${c.id}')"><span>${indexMap.get(c.id)}</span></div>`).join('');
     const layer = document.getElementById('comment-layer');
     layer.innerHTML = pinsHtml;
     layer.classList.toggle('commenting', state.commentMode);
- 
+
     let panelList = state.comments.slice();
     if(state.filterClienteOnly) panelList = panelList.filter(c => c.author === 'cliente');
     if(state.filterUnresolvedOnly) panelList = panelList.filter(c => !c.resolved);
- 
+
     const filterBtn = document.getElementById('filter-cliente-btn');
     if(filterBtn) filterBtn.classList.toggle('active', state.filterClienteOnly);
- 
+
     const commentsHtml = panelList.map(c => {
       const canDelete = (c.author === 'equipa' && isEquipa()) || (c.author === 'cliente' && !isEquipa());
       const resolveBtn = isEquipa() ? `<button class="mini-btn" title="Marcar como resolvido" onclick="toggleResolved('${c.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>` : '';
@@ -596,6 +661,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
       const time = new Date(c.created_at).toLocaleString('pt-PT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
       return `<div class="comment${c.resolved ? ' resolved' : ''}${isSelected ? ' selected' : ''}" id="comment-${c.id}">
         <div class="comment-meta-line">
+          <span class="comment-number">#${indexMap.get(c.id)}</span>
           <span class="comment-author">${authorLabel}</span>
           <span class="comment-dot"></span>
           <span class="comment-time">${time}</span>
@@ -608,9 +674,9 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
       </div>`;
     }).join('') || '<p style="font-size:13px;color:var(--ink-soft);">Nenhum comentário encontrado.</p>';
     document.getElementById('comments-list').innerHTML = commentsHtml;
- 
+
     document.getElementById('comments-panel').classList.toggle('open', state.commentsVisible);
- 
+
     const toggleBtn = document.getElementById('toggle-btn');
     if(toggleBtn){
       toggleBtn.classList.toggle('active', state.commentsVisible);
@@ -618,6 +684,5 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
       label.textContent = !state.commentsVisible ? 'Fazer comentário' : (state.commentMode ? 'Clique no protótipo...' : 'Fechar comentários');
     }
   }
- 
+
   boot();
- 
