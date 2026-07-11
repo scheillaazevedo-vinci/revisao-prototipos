@@ -104,10 +104,10 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
   }
   async function loadNotifications(){
     const { data, error } = await sb.from('comments')
-      .select('id, presentation_id, text, created_at, presentations(name, projects(name))')
+      .select('id, presentation_id, text, created_at, seen_by_team, presentations(name, projects(name))')
       .eq('author', 'cliente')
-      .eq('seen_by_team', false)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(30);
     if(error){ console.error('Erro ao carregar notificações:', error); return; }
     state.notifications = (data || []).map(row => ({
       id: row.id,
@@ -115,15 +115,17 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
       presentationName: row.presentations?.name || 'Apresentação',
       projectName: row.presentations?.projects?.name || '',
       text: row.text,
-      createdAt: row.created_at
+      createdAt: row.created_at,
+      seen: row.seen_by_team
     }));
     updateNotifBell();
   }
   function updateNotifBell(){
     const badge = document.getElementById('notif-badge');
     if(!badge) return;
-    badge.textContent = state.notifications.length;
-    badge.classList.toggle('hidden', state.notifications.length === 0);
+    const unseenCount = state.notifications.filter(n => !n.seen).length;
+    badge.textContent = unseenCount;
+    badge.classList.toggle('hidden', unseenCount === 0);
     renderNotifDropdown();
   }
   function toggleNotifDropdown(){
@@ -136,15 +138,18 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     dd.classList.toggle('hidden', !state.notifDropdownOpen);
     if(!state.notifDropdownOpen) return;
     if(state.notifications.length === 0){
-      dd.innerHTML = '<div class="notif-empty">Sem notificações novas</div>';
+      dd.innerHTML = '<div class="notif-empty">Ainda não há comentários de clientes</div>';
       return;
     }
     dd.innerHTML = state.notifications.map((n, i) => {
       const time = new Date(n.createdAt).toLocaleString('pt-PT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
       return `
-      <div class="notif-item" onclick="openNotification(${i})">
-        <div style="font-size:11px; color:var(--ink-mute); margin-bottom:2px;">${esc(n.projectName)}</div>
-        <div style="font-weight:700; font-size:13.5px; margin-bottom:5px;">${esc(n.presentationName)}</div>
+      <div class="notif-item${n.seen ? '' : ' unseen'}" onclick="openNotification(${i})">
+        <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+          ${!n.seen ? '<span class="notif-dot"></span>' : ''}
+          <span style="font-size:11px; color:var(--ink-mute);">${esc(n.projectName)}</span>
+        </div>
+        <div style="font-weight:700; font-size:13.5px; margin-bottom:5px; color:${n.seen ? 'var(--ink-soft)' : 'var(--ink)'};">${esc(n.presentationName)}</div>
         <div style="color:var(--ink-soft); margin-bottom:4px;">${esc(n.text.slice(0, 60))}${n.text.length > 60 ? '…' : ''}</div>
         <div style="font-size:11px; color:var(--ink-mute);">${time}</div>
       </div>`;
