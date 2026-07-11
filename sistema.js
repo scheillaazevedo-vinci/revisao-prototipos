@@ -40,6 +40,8 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     state.session = data.session;
     sb.auth.onAuthStateChange((_event, session) => { state.session = session; });
 
+    await pingHeartbeatAndMaybeWarn();
+
     if(state.session){ subscribeGlobalNotifications(); }
 
     const params = new URLSearchParams(window.location.search);
@@ -56,6 +58,23 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
       await loadProjects();
     }
     render();
+  }
+
+  async function pingHeartbeatAndMaybeWarn(){
+    try{
+      const { data: prev } = await sb.from('app_heartbeat').select('last_ping').eq('id', 1).single();
+      const previousPing = prev?.last_ping ? new Date(prev.last_ping) : null;
+      await sb.from('app_heartbeat').update({ last_ping: new Date().toISOString() }).eq('id', 1);
+      if(state.session && previousPing){
+        const daysSince = (Date.now() - previousPing.getTime()) / 86400000;
+        if(daysSince > 4){
+          document.getElementById('inactivity-banner').classList.remove('hidden');
+        }
+      }
+    }catch(e){ /* tabela ainda não criada, ou sem permissão; ignora silenciosamente */ }
+  }
+  function dismissBanner(){
+    document.getElementById('inactivity-banner').classList.add('hidden');
   }
 
   // ---------- Autenticação ----------
