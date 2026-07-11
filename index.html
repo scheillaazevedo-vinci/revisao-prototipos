@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --ink:#1c2024; --ink-soft:#565c66; --paper:#fbfbfa; --line:#e2e4e8;
+    --ink:#1c2024; --ink-soft:#565c66; --ink-mute:#8a8f99; --paper:#fbfbfa; --line:#e2e4e8;
     --panel:#141619; --panel-line:#2a2d31; --accent:#2f6fed; --accent-soft:#e8f0fe;
     --pro:#7c4dff; --pro-soft:#f1ecff; --success:#1a9e6b; --success-soft:#e3f7ee;
     --danger:#c0392b; --danger-soft:#fbe9e7; --radius:10px;
@@ -20,27 +20,53 @@
   html,body{height:100%;}
   body{font-family:var(--font); color:var(--ink); background:var(--paper);}
   .hidden{display:none !important;}
-  .topbar{background:var(--panel); color:#fff; display:flex; align-items:center; gap:12px; padding:0 20px; height:52px;}
+ 
+  .topbar{background:var(--panel); color:#fff; display:flex; align-items:center; gap:12px; padding:0 20px; height:52px; flex-shrink:0;}
   .topbar .crumb{font-size:12.5px; color:#9aa0aa;}
   .topbar .crumb b{color:#fff; font-weight:600;}
-  .icon-btn{background:transparent; border:1px solid var(--panel-line); color:#fff; width:32px; height:32px; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px;}
+  .icon-btn{background:transparent; border:1px solid var(--panel-line); color:#fff; width:32px; height:32px; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .icon-btn:hover{background:#1f2226;}
   .icon-btn.on-light{border-color:var(--line); color:var(--ink);}
   .icon-btn.on-light:hover{background:var(--paper);}
+ 
+  .comment-toggle-btn{
+    margin-left:auto; display:flex; align-items:center; gap:6px;
+    background:transparent; border:1px solid var(--panel-line); color:#fff;
+    padding:7px 13px; border-radius:7px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:var(--font);
+  }
+  .comment-toggle-btn.active{background:var(--accent); border-color:var(--accent);}
+ 
   .page{max-width:960px; margin:0 auto; padding:32px 24px;}
+  .page-full{padding:0; height:calc(100vh - 52px); display:flex; overflow:hidden;}
+ 
+  .hero{margin-bottom:32px;}
+  .hero h1{font-size:24px; font-weight:700; letter-spacing:-0.01em; margin-bottom:6px;}
+  .hero p{font-size:14px; color:var(--ink-soft);}
+  .hero p b{color:var(--ink); font-weight:600;}
+ 
   .page-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;}
-  .page-header h1{font-size:19px; font-weight:600;}
+  .page-header h1{font-size:19px; font-weight:700;}
   .btn{background:var(--ink); color:#fff; border:none; padding:9px 15px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:var(--font);}
   .btn:hover{background:#000;}
   .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink); padding:8px 14px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; font-family:var(--font);}
   .btn-ghost:hover{background:#f2f2f0;}
-  .card-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px;}
-  .project-card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px; cursor:pointer; display:flex; flex-direction:column; gap:10px;}
-  .project-card:hover{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
-  .project-icon{width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px;}
-  .project-card .name{font-size:15px; font-weight:600;}
-  .project-card .meta{font-size:12.5px; color:var(--ink-soft);}
-  .project-card.new{border-style:dashed; align-items:center; justify-content:center; color:var(--ink-soft); font-size:13.5px; font-weight:600;}
+ 
+  .card-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px;}
+  .project-card{background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease;}
+  .project-card:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(20,22,25,.08);}
+  .card-strip{height:64px;}
+  .card-body{padding:16px 18px 18px;}
+  .card-body .name{font-size:16px; font-weight:700; margin-bottom:8px;}
+  .card-meta-count{display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:var(--ink); margin-bottom:6px;}
+  .card-meta-date{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-soft);}
+  .project-card.new{display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; border-style:dashed; color:var(--ink-soft); min-height:158px; transition:border-color .15s ease, color .15s ease;}
+  .project-card.new:hover{border-color:var(--accent); color:var(--accent);}
+ 
+  .swatch-row{display:flex; gap:8px; margin-bottom:4px;}
+  .swatch{width:32px; height:32px; border-radius:50%; cursor:pointer; border:2px solid transparent;}
+  .swatch.selected{border-color:var(--ink); box-shadow:0 0 0 2px #fff inset;}
+  .swatch-label{font-size:12.5px; font-weight:600; margin-bottom:10px; display:block;}
+ 
   table{width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden;}
   th{text-align:left; font-size:11.5px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; padding:12px 16px; border-bottom:1px solid var(--line); background:#fafaf9;}
   td{padding:13px 16px; font-size:13.5px; border-bottom:1px solid var(--line);}
@@ -50,14 +76,25 @@
   .status-active{background:var(--success-soft); color:var(--success);}
   .status-inactive{background:var(--danger-soft); color:var(--danger);}
   .row-actions{display:flex; gap:6px; justify-content:flex-end;}
-  .review-grid{display:grid; grid-template-columns:1.6fr 1fr; gap:20px;}
-  .review-grid.comments-hidden{grid-template-columns:1fr;}
-  .review-grid.comments-hidden .comments-col{display:none;}
-  .proto-wrap{position:relative; background:#111; border-radius:12px; height:560px; overflow:hidden;}
+ 
+  .status-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:22px;}
+  .status-row .label{font-size:13px; font-weight:600;}
+  .status-row .hint{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  .switch{position:relative; width:42px; height:24px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0;}
+  .switch .track{position:absolute; inset:0; background:var(--line); border-radius:20px; cursor:pointer; transition:background .15s;}
+  .switch .track::before{content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .15s;}
+  .switch input:checked + .track{background:var(--success);}
+  .switch input:checked + .track::before{transform:translateX(18px);}
+  .danger-zone{border-top:1px solid var(--line); padding-top:16px; margin-bottom:6px;}
+  .btn-danger-ghost{background:transparent; border:1px solid var(--danger-soft); color:var(--danger); padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:var(--font); width:100%;}
+ 
+  .stage{display:flex; width:100%;}
+  .proto-wrap{flex:1; position:relative; background:#111; transition:flex .2s ease;}
   .proto-wrap iframe{width:100%; height:100%; border:none; display:block;}
   .comment-layer{position:absolute; inset:0; pointer-events:none;}
   .comment-layer.commenting{pointer-events:auto; cursor:crosshair;}
-  .pin{position:absolute; width:24px; height:24px; background:var(--accent); border:2px solid #fff; border-radius:50% 50% 50% 0; transform:translate(-50%,-100%) rotate(-45deg); display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; cursor:pointer; pointer-events:auto;}
+  .pin{position:absolute; width:26px; height:26px; background:var(--accent); border:2px solid #fff; border-radius:50% 50% 50% 0; transform:translate(-50%,-100%) rotate(-45deg); display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:700; cursor:pointer; pointer-events:auto;}
   .pin span{transform:rotate(45deg);}
   .popover{position:absolute; width:250px; background:#fff; border-radius:9px; box-shadow:0 10px 30px rgba(0,0,0,.25); padding:12px; pointer-events:auto; z-index:20;}
   .popover textarea{width:100%; min-height:64px; border:1px solid var(--line); border-radius:6px; padding:8px; font-family:var(--font); font-size:13px; resize:vertical; margin-bottom:8px;}
@@ -65,39 +102,66 @@
   .popover button{font-family:var(--font); font-size:12px; font-weight:600; padding:6px 11px; border-radius:6px; border:none; cursor:pointer;}
   .popover .save{background:var(--ink); color:#fff;}
   .popover .cancel{background:var(--line); color:var(--ink);}
-  .comments-col-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
-  .comments-col-header span{font-size:12.5px; font-weight:600; color:var(--ink-soft);}
-  .comment{border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; background:#fff;}
+ 
+  .comments-panel{width:0; overflow:hidden; background:#fff; border-left:1px solid var(--line); transition:width .2s ease; flex-shrink:0;}
+  .comments-panel.open{width:320px;}
+  .comments-panel-inner{width:320px; padding:16px; height:100%; overflow-y:auto;}
+  .comments-panel-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .comments-panel-header span{font-size:13px; font-weight:700;}
+ 
+  .comment{border:1px solid var(--line); border-radius:10px; padding:11px 13px; margin-bottom:10px; transition:border-color .15s, box-shadow .15s;}
+  .comment.selected{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft);}
   .comment.resolved{opacity:.55;}
-  .comment-head{display:flex; align-items:center; gap:8px; margin-bottom:7px;}
-  .badge{font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px;}
-  .badge-cliente{background:var(--accent-soft); color:var(--accent);}
-  .badge-equipa{background:var(--pro-soft); color:var(--pro);}
-  .resolved-tag{font-size:11px; color:var(--success); font-weight:600;}
+  .comment-meta-line{display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;}
+  .comment-author{font-size:11px; color:var(--ink-mute); font-weight:600;}
+  .comment-time{font-size:11px; color:var(--ink-mute);}
+  .comment-dot{width:5px; height:5px; border-radius:50%; background:var(--ink-mute); flex-shrink:0;}
   .comment-actions{margin-left:auto; display:flex; gap:4px;}
+  .resolved-tag{font-size:10.5px; color:var(--success); font-weight:600;}
   .comment p{font-size:13px; line-height:1.5;}
-  .mini-btn{width:26px; height:26px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px;}
+  .mini-btn{width:24px; height:24px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .mini-btn:disabled{opacity:.35; cursor:not-allowed;}
   .mini-btn:hover:not(:disabled){background:var(--paper);}
-  .reopen-comments-btn{position:absolute; top:16px; right:16px; background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:var(--font); z-index:5;}
+ 
   .modal-overlay{position:fixed; inset:0; background:rgba(10,11,13,.5); display:flex; align-items:center; justify-content:center; z-index:50;}
-  .modal-box{background:#fff; border-radius:12px; padding:24px 26px; width:100%; max-width:380px;}
-  .modal-box h2{font-size:16px; font-weight:600; margin-bottom:14px;}
+  .modal-box{background:#fff; border-radius:14px; padding:26px 28px; width:100%; max-width:380px;}
+  .modal-box h2{font-size:16px; font-weight:700; margin-bottom:16px;}
   .modal-box label{display:block; font-size:12.5px; font-weight:600; margin-bottom:6px;}
-  .modal-box input{width:100%; padding:9px 11px; font-size:13px; border:1px solid var(--line); border-radius:8px; margin-bottom:14px; font-family:var(--font);}
-  .modal-actions{display:flex; gap:8px; justify-content:flex-end;}
-  .toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--panel); color:#fff; font-size:12.5px; padding:9px 16px; border-radius:8px; z-index:60; opacity:0; pointer-events:none; transition:opacity .2s;}
+  .modal-box input[type=text]{width:100%; padding:10px 12px; font-size:13.5px; border:1px solid var(--line); border-radius:8px; margin-bottom:20px; font-family:var(--font);}
+  .modal-actions{display:flex; gap:8px; justify-content:flex-end; margin-top:6px;}
+ 
+  .toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--panel); color:#fff; font-size:12.5px; padding:9px 16px; border-radius:8px; z-index:60; opacity:0; pointer-events:none; transition:opacity .2s; display:flex; align-items:center; gap:8px;}
   .toast.show{opacity:1;}
-  .login-wrap{max-width:360px; margin:120px auto; text-align:center;}
-  .login-wrap h1{font-size:19px; margin-bottom:10px;}
-  .login-wrap p{font-size:13.5px; color:var(--ink-soft); margin-bottom:22px; line-height:1.5;}
+ 
+  .split{display:grid; grid-template-columns:1fr 1fr; min-height:100vh;}
+  .brand-side{
+    background:linear-gradient(160deg, #141619 0%, #241c30 50%, #22305e 100%);
+    color:#fff; display:flex; flex-direction:column; justify-content:space-between; padding:40px;
+    position:relative; overflow:hidden;
+  }
+  .brand-side::before{content:''; position:absolute; width:360px; height:360px; border-radius:50%; background:radial-gradient(circle, rgba(162,0,103,.32), transparent 70%); left:-120px; top:-120px;}
+  .brand-side::after{content:''; position:absolute; width:420px; height:420px; border-radius:50%; background:radial-gradient(circle, rgba(47,111,237,.35), transparent 70%); right:-140px; bottom:-160px;}
+  .brand-mark{display:flex; flex-direction:column; align-items:flex-start; gap:8px; z-index:1;}
+  .brand-mark img{display:block;}
+  .brand-mark span{font-size:13px; font-weight:400; color:#c7ccd6;}
+  .brand-copy{z-index:1;}
+  .brand-copy h1{font-size:30px; font-weight:700; letter-spacing:-0.01em; line-height:1.25; margin-bottom:14px; max-width:380px;}
+  .brand-copy p{font-size:14.5px; color:#aab0bd; line-height:1.6; max-width:360px;}
+  .brand-footer{font-size:12px; color:#6b7280; z-index:1;}
+  .form-side{background:var(--paper); display:flex; align-items:center; justify-content:center; padding:40px;}
+  .login-card{width:100%; max-width:340px; text-align:left;}
+  .login-card h2{font-size:20px; font-weight:700; margin-bottom:8px;}
+  .login-card p{font-size:13.5px; color:var(--ink-soft); line-height:1.55; margin-bottom:28px;}
+  .btn-github{width:100%; background:var(--ink); color:#fff; border:none; padding:12px 16px; border-radius:9px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:var(--font); display:flex; align-items:center; justify-content:center; gap:8px;}
+  .login-foot{margin-top:18px; font-size:12px; color:var(--ink-soft); text-align:center;}
+ 
   .unavailable{max-width:420px; margin:100px auto; text-align:center;}
   .unavailable .icon{width:44px; height:44px; border-radius:50%; background:var(--danger-soft); color:var(--danger); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:19px;}
 </style>
 </head>
 <body>
 <div class="topbar">
-  <button class="icon-btn hidden" id="back-btn">&larr;</button>
+  <button class="icon-btn hidden" id="back-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
   <span class="crumb" id="crumb">Revisão de protótipos</span>
   <div id="topbar-right" style="margin-left:auto; display:flex; gap:8px;"></div>
 </div>
@@ -121,8 +185,9 @@
     presentations: [],
     presentation: null,
     comments: [],
-    commentsVisible: true,
+    commentsVisible: false,
     commentMode: false,
+    selectedCommentId: null,
     currentNodeId: null,
     realtimeChannel: null
   };
@@ -174,7 +239,7 @@
  
   // ---------- Projetos ----------
   async function loadProjects(){
-    const { data, error } = await sb.from('projects').select('*, presentations(id)').order('created_at');
+    const { data, error } = await sb.from('projects').select('*, presentations(id, status)').order('created_at');
     if(error){ showToast('Erro a carregar projetos'); return; }
     state.projects = data || [];
   }
@@ -188,18 +253,35 @@
   }
   function currentProject(){ return state.projects.find(p => p.id === state.currentProjectId); }
  
-  const COLOR_OPTIONS = ['#2f6fed', '#7c4dff', '#1a9e6b', '#e08a1e', '#c0392b', '#0d9488'];
-  function colorSwatches(selected){
-    return COLOR_OPTIONS.map(c => `<button type="button" onclick="selectSwatch('${c}')" data-swatch="${c}" style="width:26px;height:26px;border-radius:50%;background:${c};border:2px solid ${c===selected?'#000':'transparent'};cursor:pointer;margin-right:6px;"></button>`).join('');
+  const GRADIENT_OPTIONS = [
+    ['#2f6fed', '#7fa8f5'],
+    ['#7c4dff', '#b39dff'],
+    ['#0f9e75', '#6fd9b2'],
+    ['#d85a30', '#f2a583'],
+    ['#a20067', '#e0699f'],
+    ['#b3860b', '#f0c96a']
+  ];
+  function gradientCss(colorValue){
+    const parts = String(colorValue || '').split(',').map(s => s.trim()).filter(Boolean);
+    if(parts.length >= 2) return `linear-gradient(135deg, ${parts[0]}, ${parts[1]})`;
+    if(parts.length === 1) return `linear-gradient(135deg, ${parts[0]}, ${parts[0]})`;
+    return `linear-gradient(135deg, ${GRADIENT_OPTIONS[0][0]}, ${GRADIENT_OPTIONS[0][1]})`;
   }
-  function selectSwatch(color){
-    document.getElementById('project-color-input').value = color;
-    document.querySelectorAll('[data-swatch]').forEach(el => { el.style.borderColor = el.getAttribute('data-swatch') === color ? '#000' : 'transparent'; });
+  function colorSwatches(selected){
+    return GRADIENT_OPTIONS.map(pair => {
+      const value = pair.join(',');
+      const isSel = value === selected;
+      return `<div class="swatch${isSel ? ' selected' : ''}" data-swatch="${value}" style="background:linear-gradient(135deg, ${pair[0]}, ${pair[1]});" onclick="selectSwatch('${value}')"></div>`;
+    }).join('');
+  }
+  function selectSwatch(value){
+    document.getElementById('project-color-input').value = value;
+    document.querySelectorAll('[data-swatch]').forEach(el => { el.classList.toggle('selected', el.getAttribute('data-swatch') === value); });
   }
   function openProjectModal(id){
     const project = id ? state.projects.find(p => p.id === id) : null;
     const name = project ? project.name : '';
-    const color = project ? project.color : COLOR_OPTIONS[0];
+    const color = project ? project.color : GRADIENT_OPTIONS[0].join(',');
     const deleteBtn = project ? `<button class="btn-ghost" style="color:var(--danger);" onclick="deleteProject('${project.id}')">Eliminar projeto</button>` : '';
     document.getElementById('modal-root').innerHTML = `
       <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
@@ -207,9 +289,9 @@
           <h2>${project ? 'Configurar projeto' : 'Criar projeto'}</h2>
           <label for="project-name-input">Nome do projeto</label>
           <input type="text" id="project-name-input" value="${esc(name)}" placeholder="Nome do cliente">
-          <label>Cor do ícone</label>
+          <span class="swatch-label">Cor do projecto</span>
           <input type="hidden" id="project-color-input" value="${color}">
-          <div style="margin-bottom:16px;">${colorSwatches(color)}</div>
+          <div class="swatch-row" style="margin-bottom:20px;">${colorSwatches(color)}</div>
           <div class="modal-actions">${deleteBtn}
             <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
             <button class="btn" onclick="submitProjectModal(${project ? `'${project.id}'` : 'null'})">${project ? 'Guardar' : 'Criar'}</button>
@@ -279,17 +361,11 @@
     await openProject(state.currentProjectId);
     showToast('Apresentação criada');
   }
-  async function toggleStatus(id){
-    const pr = state.presentations.find(p => p.id === id);
-    const newStatus = pr.status === 'ativo' ? 'inativo' : 'ativo';
-    const { error } = await sb.from('presentations').update({ status: newStatus }).eq('id', id);
-    if(error){ showToast('Erro ao actualizar estado'); return; }
-    await openProject(state.currentProjectId);
-  }
   async function deletePresentation(id){
     if(!confirm('Eliminar esta apresentação e todos os seus comentários?')) return;
     const { error } = await sb.from('presentations').delete().eq('id', id);
     if(error){ showToast('Erro ao eliminar'); return; }
+    closeModal();
     await openProject(state.currentProjectId);
   }
  
@@ -305,7 +381,9 @@
   }
   async function openReview(presentationId){
     state.currentPresentationId = presentationId;
-    state.commentsVisible = true;
+    state.commentsVisible = false;
+    state.commentMode = false;
+    state.selectedCommentId = null;
     state.currentNodeId = null;
     const { data: pres, error } = await sb.from('presentations').select('*, projects(name)').eq('id', presentationId).single();
     if(error || !pres){ state.screen = 'not-found'; render(); return; }
@@ -335,8 +413,24 @@
       updateReviewDynamic();
     }
   });
-  function toggleCommentsPanel(){ state.commentsVisible = !state.commentsVisible; updateReviewDynamic(); }
-  function toggleCommentMode(){ state.commentMode = !state.commentMode; updateReviewDynamic(); }
+  function toggleCommentPanelAndMode(){
+    const opening = !state.commentsVisible;
+    state.commentsVisible = opening;
+    state.commentMode = opening;
+    updateReviewDynamic();
+  }
+  function closeCommentPanel(){
+    state.commentsVisible = false;
+    state.commentMode = false;
+    updateReviewDynamic();
+  }
+  function selectComment(id){
+    if(!state.commentsVisible){ state.commentsVisible = true; }
+    state.selectedCommentId = id;
+    updateReviewDynamic();
+    const el = document.getElementById('comment-' + id);
+    if(el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
   function closeAnyPopover(){ const el = document.querySelector('.popover'); if(el) el.remove(); }
  
   function placeComment(ev){
@@ -389,44 +483,93 @@
     const backBtn = document.getElementById('back-btn');
     const crumb = document.getElementById('crumb');
     const topRight = document.getElementById('topbar-right');
+    const topbarEl = document.querySelector('.topbar');
+    const pageEl = document.getElementById('page');
     backBtn.classList.add('hidden');
     backBtn.onclick = null;
     topRight.innerHTML = '';
  
-    if(state.screen === 'login'){ crumb.textContent = 'Revisão de protótipos'; renderLogin(); return; }
-    if(state.screen === 'not-found'){ crumb.textContent = 'Revisão de protótipos'; renderNotFound(); return; }
+    if(state.screen === 'login'){
+      topbarEl.style.display = 'none';
+      pageEl.className = '';
+      renderLogin();
+      return;
+    }
+    topbarEl.style.display = 'flex';
+ 
+    if(state.screen === 'not-found'){
+      pageEl.className = 'page';
+      crumb.textContent = 'Revisão de protótipos';
+      renderNotFound();
+      return;
+    }
  
     if(state.screen === 'projects'){
+      pageEl.className = 'page';
       crumb.textContent = 'Revisão de protótipos';
-      topRight.innerHTML = `<button class="icon-btn" title="Terminar sessão" onclick="logout()">&#9211;</button>`;
+      topRight.innerHTML = `<button class="icon-btn" title="Terminar sessão" onclick="logout()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></button>`;
       renderProjects();
     }
     if(state.screen === 'detail'){
+      pageEl.className = 'page';
       const project = currentProject();
       backBtn.classList.remove('hidden');
       backBtn.onclick = () => { state.screen = 'projects'; render(); };
       crumb.innerHTML = 'Revisão de protótipos &rsaquo; <b>' + esc(project ? project.name : '') + '</b>';
-      topRight.innerHTML = `<button class="icon-btn" title="Terminar sessão" onclick="logout()">&#9211;</button>`;
+      topRight.innerHTML = `<button class="icon-btn" title="Terminar sessão" onclick="logout()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></button>`;
       renderDetail();
     }
     if(state.screen === 'review'){
+      const p = state.presentation;
+      const blocked = p.status === 'inativo' && !isEquipa();
+      pageEl.className = blocked ? 'page' : 'page-full';
       if(isEquipa()){
         backBtn.classList.remove('hidden');
         backBtn.onclick = () => { state.screen = 'detail'; render(); };
       }
-      const p = state.presentation;
       crumb.innerHTML = 'Revisão de protótipos &rsaquo; ' + esc(p?.projects?.name || '') + ' &rsaquo; <b>' + esc(p?.name || '') + '</b>';
+      if(!blocked){
+        topRight.innerHTML = `
+          <button class="comment-toggle-btn" id="toggle-btn" onclick="toggleCommentPanelAndMode()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            <span id="toggle-label">Fazer comentário</span>
+          </button>`;
+      }
       renderReview();
     }
   }
  
   function renderLogin(){
     document.getElementById('page').innerHTML = `
-      <div class="login-wrap">
-        <h1>Painel da equipa</h1>
-        <p>Inicie sessão com a sua conta GitHub da empresa para gerir os projetos e apresentações.</p>
-        <button class="btn" onclick="loginWithGithub()">Iniciar sessão com o GitHub</button>
+      <div class="split">
+        <div class="brand-side">
+          <div class="brand-mark">
+            <img src="logo-branco.webp" alt="Logótipo" id="brand-logo">
+            <span>Revisão de protótipos</span>
+          </div>
+          <div class="brand-copy">
+            <h1>Apresente protótipos ao cliente, sem abrir as portas do Figma.</h1>
+            <p>Partilhe apenas o que o cliente precisa de ver, e receba o feedback dele organizado num só lugar, sem trocas de ficheiros por email.</p>
+          </div>
+          <div class="brand-footer">Ferramenta interna · Equipa de Design</div>
+        </div>
+        <div class="form-side">
+          <div class="login-card">
+            <h2>Painel da equipa</h2>
+            <p>Inicie sessão com a sua conta GitHub da empresa para gerir projectos e apresentações.</p>
+            <button class="btn-github" onclick="loginWithGithub()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.75 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.74.81 1.18 1.83 1.18 3.09 0 4.43-2.7 5.4-5.27 5.69.41.36.78 1.08.78 2.17 0 1.57-.01 2.83-.01 3.22 0 .3.2.66.79.55A10.52 10.52 0 0 0 23.5 12c0-6.27-5.23-11.5-11.5-11.5Z"/></svg>
+              Iniciar sessão com o GitHub
+            </button>
+            <div class="login-foot">Precisa de acesso? Contacte a equipa de design.</div>
+          </div>
+        </div>
       </div>`;
+    const logo = document.getElementById('brand-logo');
+    logo.addEventListener('load', function(){
+      logo.style.width = (logo.naturalWidth * 0.6) + 'px';
+      logo.style.height = 'auto';
+    });
   }
   function renderNotFound(){
     document.getElementById('page').innerHTML = `
@@ -437,16 +580,32 @@
       </div>`;
   }
  
+  function greetingName(){
+    const meta = state.session?.user?.user_metadata || {};
+    return meta.full_name || meta.name || meta.user_name || state.session?.user?.email?.split('@')[0] || 'equipa';
+  }
   function renderProjects(){
-    let cards = state.projects.map(p => `
+    const totalProjects = state.projects.length;
+    const totalActive = state.projects.reduce((sum, p) => sum + (p.presentations || []).filter(pr => pr.status === 'ativo').length, 0);
+    let cards = state.projects.map(p => {
+      const count = (p.presentations || []).length;
+      const label = count === 1 ? '1 apresentação' : `${count} apresentações`;
+      return `
       <div class="project-card" onclick="openProject('${p.id}')">
-        <div class="project-icon" style="background:${p.color}22; color:${p.color};">${esc(p.name.charAt(0))}</div>
-        <div class="name">${esc(p.name)}</div>
-        <div class="meta">${(p.presentations || []).length} apresentação(ões)</div>
-      </div>`).join('');
-    cards += `<div class="project-card new" onclick="openProjectModal(null)">+ Novo projeto</div>`;
+        <div class="card-strip" style="background:${gradientCss(p.color)};"></div>
+        <div class="card-body">
+          <div class="name">${esc(p.name)}</div>
+          <div class="card-meta-count"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/></svg>${label}</div>
+          <div class="card-meta-date"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>${new Date(p.created_at).toLocaleDateString('pt-PT')}</div>
+        </div>
+      </div>`;
+    }).join('');
+    cards += `<div class="project-card new" onclick="openProjectModal(null)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>Novo projeto</span></div>`;
     document.getElementById('page').innerHTML = `
-      <div class="page-header"><h1>Projetos</h1></div>
+      <div class="hero">
+        <h1>Olá, ${esc(greetingName())}</h1>
+        <p><b>${totalProjects} projeto${totalProjects === 1 ? '' : 's'}</b> · ${totalActive} apresentaç${totalActive === 1 ? 'ão activa' : 'ões activas'}</p>
+      </div>
       <div class="card-grid">${cards}</div>`;
   }
  
@@ -460,10 +619,15 @@
         <td>${new Date(pr.created_at).toLocaleDateString('pt-PT')}</td>
         <td><span class="status-pill ${statusClass}">${pr.status}</span></td>
         <td><div class="row-actions">
-          <button class="icon-btn on-light" title="Copiar link de apresentação" onclick="copyLink('${pr.id}')">&#128279;</button>
-          <button class="icon-btn on-light" title="Aceder ao protótipo" onclick="openReview('${pr.id}')">&#8599;</button>
-          <button class="icon-btn on-light" title="Alternar estado" onclick="toggleStatus('${pr.id}')">&#8635;</button>
-          <button class="icon-btn on-light" title="Eliminar" onclick="deletePresentation('${pr.id}')">&#128465;</button>
+          <button class="icon-btn on-light" title="Copiar link de apresentação" onclick="copyLink('${pr.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a3.5 3.5 0 0 0 5 0l4-4a3.5 3.5 0 0 0-5-5l-1.5 1.5"/><path d="M14 10a3.5 3.5 0 0 0-5 0l-4 4a3.5 3.5 0 0 0 5 5l1.5-1.5"/></svg>
+          </button>
+          <button class="icon-btn on-light" title="Ver protótipo" onclick="openReview('${pr.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="icon-btn on-light" title="Configurar apresentação" onclick="openPresentationModal('${pr.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
         </div></td>
       </tr>`;
     }).join('');
@@ -476,6 +640,45 @@
       </div>
       <table><thead><tr><th>Nome</th><th>Data de criação</th><th>Estado</th><th></th></tr></thead>
       <tbody>${rows || '<tr><td colspan="4" style="color:var(--ink-soft);">Ainda não existem apresentações.</td></tr>'}</tbody></table>`;
+  }
+ 
+  function openPresentationModal(id){
+    const pr = state.presentations.find(p => p.id === id);
+    document.getElementById('modal-root').innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+        <div class="modal-box">
+          <h2>Configurar apresentação</h2>
+          <label for="pres-name-input">Nome da apresentação</label>
+          <input type="text" id="pres-name-input" value="${esc(pr.name)}">
+          <div class="status-row">
+            <div>
+              <div class="label">Apresentação activa</div>
+              <div class="hint">Se desactivar, o cliente vê uma mensagem de indisponibilidade.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="pres-active-input" ${pr.status === 'ativo' ? 'checked' : ''}>
+              <span class="track"></span>
+            </label>
+          </div>
+          <div class="danger-zone">
+            <button class="btn-danger-ghost" onclick="deletePresentation('${pr.id}')">Remover apresentação</button>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
+            <button class="btn" onclick="submitPresentationModal('${pr.id}')">Guardar</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  async function submitPresentationModal(id){
+    const name = document.getElementById('pres-name-input').value.trim();
+    const active = document.getElementById('pres-active-input').checked;
+    if(!name){ showToast('Dê um nome à apresentação antes de continuar'); return; }
+    const { error } = await sb.from('presentations').update({ name, status: active ? 'ativo' : 'inativo' }).eq('id', id);
+    if(error){ showToast('Sem permissão ou erro ao guardar'); return; }
+    closeModal();
+    await openProject(state.currentProjectId);
+    showToast('Apresentação actualizada');
   }
  
   function renderReview(){
@@ -501,18 +704,21 @@
     const p = state.presentation;
     const embedUrl = toEmbedUrl(p.figma_link);
     document.getElementById('page').innerHTML = `
-      <div style="display:flex;align-items:center;margin-bottom:12px;">
-        <button class="btn-ghost" id="comment-mode-btn" onclick="toggleCommentMode()">+ Fazer comentário</button>
-      </div>
-      <div class="review-grid" id="review-grid">
+      <div class="stage">
         <div class="proto-wrap">
           <iframe id="proto-frame" credentialless data-presentation-id="${state.currentPresentationId}" src="${embedUrl || ''}" allowfullscreen></iframe>
           <div id="comment-layer" class="comment-layer" onclick="placeComment(event)"></div>
-          <div id="reopen-btn-wrap"></div>
         </div>
-        <div class="comments-col" id="comments-col">
-          <div class="comments-col-header"><span>Comentários</span><button class="icon-btn on-light" title="Ocultar comentários" onclick="toggleCommentsPanel()">&#10005;</button></div>
-          <div id="comments-list"></div>
+        <div class="comments-panel" id="comments-panel">
+          <div class="comments-panel-inner">
+            <div class="comments-panel-header">
+              <span>Comentários</span>
+              <button class="icon-btn on-light" title="Fechar comentários" onclick="closeCommentPanel()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div id="comments-list"></div>
+          </div>
         </div>
       </div>`;
   }
@@ -520,22 +726,25 @@
   function updateReviewDynamic(){
     const list = state.comments.filter(c => (c.screen_name || null) === (state.currentNodeId || null));
  
-    const pinsHtml = list.map((c, i) => `<div class="pin" style="left:${c.x}%; top:${c.y}%;"><span>${i+1}</span></div>`).join('');
+    const pinsHtml = list.map((c, i) => `<div class="pin" style="left:${c.x}%; top:${c.y}%;" onclick="event.stopPropagation(); selectComment('${c.id}')"><span>${i+1}</span></div>`).join('');
     const layer = document.getElementById('comment-layer');
     layer.innerHTML = pinsHtml;
     layer.classList.toggle('commenting', state.commentMode);
  
     const commentsHtml = list.map(c => {
-      const badgeClass = c.author === 'cliente' ? 'badge-cliente' : 'badge-equipa';
-      const badgeLabel = c.author === 'cliente' ? 'Cliente' : 'Equipa';
       const canDelete = (c.author === 'equipa' && isEquipa()) || (c.author === 'cliente' && !isEquipa());
-      const resolveBtn = isEquipa() ? `<button class="mini-btn" title="Marcar como resolvido" onclick="toggleResolved('${c.id}')">&#10003;</button>` : '';
-      return `<div class="comment${c.resolved ? ' resolved' : ''}">
-        <div class="comment-head">
-          <span class="badge ${badgeClass}">${badgeLabel}</span>
-          ${c.resolved ? '<span class="resolved-tag">&#10003; Resolvido</span>' : ''}
+      const resolveBtn = isEquipa() ? `<button class="mini-btn" title="Marcar como resolvido" onclick="toggleResolved('${c.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>` : '';
+      const isSelected = state.selectedCommentId === c.id;
+      const authorLabel = c.author === 'cliente' ? 'Cliente' : 'Equipa';
+      const time = new Date(c.created_at).toLocaleString('pt-PT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+      return `<div class="comment${c.resolved ? ' resolved' : ''}${isSelected ? ' selected' : ''}" id="comment-${c.id}">
+        <div class="comment-meta-line">
+          <span class="comment-author">${authorLabel}</span>
+          <span class="comment-dot"></span>
+          <span class="comment-time">${time}</span>
+          ${c.resolved ? '<span class="resolved-tag">Resolvido</span>' : ''}
           <span class="comment-actions">${resolveBtn}
-            <button class="mini-btn" title="Apagar" ${canDelete ? '' : 'disabled'} onclick="deleteComment('${c.id}')">&#128465;</button>
+            <button class="mini-btn" title="Apagar" ${canDelete ? '' : 'disabled'} onclick="deleteComment('${c.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13"/></svg></button>
           </span>
         </div>
         <p>${esc(c.text)}</p>
@@ -543,17 +752,15 @@
     }).join('') || '<p style="font-size:13px;color:var(--ink-soft);">Ainda não há comentários neste ecrã.</p>';
     document.getElementById('comments-list').innerHTML = commentsHtml;
  
-    const btn = document.getElementById('comment-mode-btn');
-    btn.textContent = state.commentMode ? 'Clique no protótipo...' : '+ Fazer comentário';
-    btn.style.cssText = state.commentMode ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : '';
+    document.getElementById('comments-panel').classList.toggle('open', state.commentsVisible);
  
-    document.getElementById('review-grid').classList.toggle('comments-hidden', !state.commentsVisible);
- 
-    document.getElementById('reopen-btn-wrap').innerHTML = state.commentsVisible
-      ? ''
-      : `<button class="reopen-comments-btn" onclick="toggleCommentsPanel()">&#128172; Mostrar comentários</button>`;
+    const toggleBtn = document.getElementById('toggle-btn');
+    if(toggleBtn){
+      toggleBtn.classList.toggle('active', state.commentsVisible);
+      const label = document.getElementById('toggle-label');
+      label.textContent = !state.commentsVisible ? 'Fazer comentário' : (state.commentMode ? 'Clique no protótipo...' : 'Fechar comentários');
+    }
   }
-  function openReadPopover(id, ev){ ev.stopPropagation(); }
  
   boot();
 </script>
