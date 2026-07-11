@@ -336,19 +336,19 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
 
   function placeComment(ev){
     if(!state.commentMode) return;
+    closeAnyPopover();
     const rect = ev.currentTarget.getBoundingClientRect();
     const xPct = ((ev.clientX - rect.left) / rect.width) * 100;
     const yPct = ((ev.clientY - rect.top) / rect.height) * 100;
     const pxX = ev.clientX - rect.left;
     const pxY = ev.clientY - rect.top;
-    state.commentMode = false;
-    updateReviewDynamic();
     const layer = document.getElementById('comment-layer');
     const pop = document.createElement('div');
     pop.className = 'popover';
     pop.style.left = Math.min(pxX, layer.clientWidth - 260) + 'px';
     pop.style.top = Math.min(pxY, layer.clientHeight - 140) + 'px';
     pop.innerHTML = `<textarea placeholder="Escreva o seu comentário..."></textarea><div class="row"><button class="cancel">Cancelar</button><button class="save">Guardar</button></div>`;
+    pop.addEventListener('click', e => e.stopPropagation());
     layer.appendChild(pop);
     const ta = pop.querySelector('textarea'); ta.focus();
     pop.querySelector('.cancel').onclick = () => pop.remove();
