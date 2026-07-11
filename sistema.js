@@ -98,21 +98,25 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     if(state.globalChannel){ sb.removeChannel(state.globalChannel); }
     state.globalChannel = sb.channel('global-client-comments')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments', filter: 'author=eq.cliente' },
-        handleNewClientComment)
+        () => { loadNotifications(); })
       .subscribe();
+    loadNotifications();
   }
-  async function handleNewClientComment(payload){
-    const row = payload.new;
-    if(state.screen === 'review' && state.currentPresentationId === row.presentation_id) return;
-    const { data } = await sb.from('presentations').select('name, projects(name)').eq('id', row.presentation_id).single();
-    state.notifications.unshift({
+  async function loadNotifications(){
+    const { data, error } = await sb.from('comments')
+      .select('id, presentation_id, text, created_at, presentations(name, projects(name))')
+      .eq('author', 'cliente')
+      .eq('seen_by_team', false)
+      .order('created_at', { ascending: false });
+    if(error){ console.error('Erro ao carregar notificações:', error); return; }
+    state.notifications = (data || []).map(row => ({
       id: row.id,
       presentationId: row.presentation_id,
-      presentationName: data?.name || 'Apresentação',
-      projectName: data?.projects?.name || '',
+      presentationName: row.presentations?.name || 'Apresentação',
+      projectName: row.presentations?.projects?.name || '',
       text: row.text,
       createdAt: row.created_at
-    });
+    }));
     updateNotifBell();
   }
   function updateNotifBell(){
@@ -148,9 +152,7 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
   }
   async function openNotification(i){
     const n = state.notifications[i];
-    state.notifications.splice(i, 1);
     state.notifDropdownOpen = false;
-    updateNotifBell();
     await openReview(n.presentationId);
   }
 
@@ -311,6 +313,11 @@ const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
     state.screen = 'review';
     await loadComments();
     subscribeComments();
+    if(isEquipa()){
+      await sb.from('comments').update({ seen_by_team: true })
+        .eq('presentation_id', presentationId).eq('author', 'cliente').eq('seen_by_team', false);
+      await loadNotifications();
+    }
     render();
   }
   async function loadComments(){
