@@ -1,2 +1,532 @@
 <!DOCTYPE html>
-<html><body><h1>Em construção</h1></body></html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revisão de Protótipos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#1c2024; --ink-soft:#565c66; --paper:#fbfbfa; --line:#e2e4e8;
+    --panel:#141619; --panel-line:#2a2d31; --accent:#2f6fed; --accent-soft:#e8f0fe;
+    --pro:#7c4dff; --pro-soft:#f1ecff; --success:#1a9e6b; --success-soft:#e3f7ee;
+    --danger:#c0392b; --danger-soft:#fbe9e7; --radius:10px;
+    --font: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{font-family:var(--font); color:var(--ink); background:var(--paper);}
+  .hidden{display:none !important;}
+  .topbar{background:var(--panel); color:#fff; display:flex; align-items:center; gap:12px; padding:0 20px; height:52px;}
+  .topbar .crumb{font-size:12.5px; color:#9aa0aa;}
+  .topbar .crumb b{color:#fff; font-weight:600;}
+  .icon-btn{background:transparent; border:1px solid var(--panel-line); color:#fff; width:32px; height:32px; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px;}
+  .icon-btn:hover{background:#1f2226;}
+  .icon-btn.on-light{border-color:var(--line); color:var(--ink);}
+  .icon-btn.on-light:hover{background:var(--paper);}
+  .page{max-width:960px; margin:0 auto; padding:32px 24px;}
+  .page-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;}
+  .page-header h1{font-size:19px; font-weight:600;}
+  .btn{background:var(--ink); color:#fff; border:none; padding:9px 15px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:var(--font);}
+  .btn:hover{background:#000;}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink); padding:8px 14px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; font-family:var(--font);}
+  .btn-ghost:hover{background:#f2f2f0;}
+  .card-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px;}
+  .project-card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px; cursor:pointer; display:flex; flex-direction:column; gap:10px;}
+  .project-card:hover{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
+  .project-icon{width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px;}
+  .project-card .name{font-size:15px; font-weight:600;}
+  .project-card .meta{font-size:12.5px; color:var(--ink-soft);}
+  .project-card.new{border-style:dashed; align-items:center; justify-content:center; color:var(--ink-soft); font-size:13.5px; font-weight:600;}
+  table{width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  th{text-align:left; font-size:11.5px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; padding:12px 16px; border-bottom:1px solid var(--line); background:#fafaf9;}
+  td{padding:13px 16px; font-size:13.5px; border-bottom:1px solid var(--line);}
+  tr:last-child td{border-bottom:none;}
+  tr.row-inactive td{color:var(--ink-soft);}
+  .status-pill{font-size:11.5px; font-weight:600; padding:3px 10px; border-radius:20px;}
+  .status-active{background:var(--success-soft); color:var(--success);}
+  .status-inactive{background:var(--danger-soft); color:var(--danger);}
+  .row-actions{display:flex; gap:6px; justify-content:flex-end;}
+  .review-grid{display:grid; grid-template-columns:1.6fr 1fr; gap:20px;}
+  .review-grid.comments-hidden{grid-template-columns:1fr;}
+  .review-grid.comments-hidden .comments-col{display:none;}
+  .proto-wrap{position:relative; background:#111; border-radius:12px; height:560px; overflow:hidden;}
+  .proto-wrap iframe{width:100%; height:100%; border:none; display:block;}
+  .comment-layer{position:absolute; inset:0; pointer-events:none;}
+  .comment-layer.commenting{pointer-events:auto; cursor:crosshair;}
+  .pin{position:absolute; width:24px; height:24px; background:var(--accent); border:2px solid #fff; border-radius:50% 50% 50% 0; transform:translate(-50%,-100%) rotate(-45deg); display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; cursor:pointer; pointer-events:auto;}
+  .pin span{transform:rotate(45deg);}
+  .popover{position:absolute; width:250px; background:#fff; border-radius:9px; box-shadow:0 10px 30px rgba(0,0,0,.25); padding:12px; pointer-events:auto; z-index:20;}
+  .popover textarea{width:100%; min-height:64px; border:1px solid var(--line); border-radius:6px; padding:8px; font-family:var(--font); font-size:13px; resize:vertical; margin-bottom:8px;}
+  .popover .row{display:flex; gap:8px; justify-content:flex-end;}
+  .popover button{font-family:var(--font); font-size:12px; font-weight:600; padding:6px 11px; border-radius:6px; border:none; cursor:pointer;}
+  .popover .save{background:var(--ink); color:#fff;}
+  .popover .cancel{background:var(--line); color:var(--ink);}
+  .comments-col-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .comments-col-header span{font-size:12.5px; font-weight:600; color:var(--ink-soft);}
+  .comment{border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; background:#fff;}
+  .comment.resolved{opacity:.55;}
+  .comment-head{display:flex; align-items:center; gap:8px; margin-bottom:7px;}
+  .badge{font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px;}
+  .badge-cliente{background:var(--accent-soft); color:var(--accent);}
+  .badge-equipa{background:var(--pro-soft); color:var(--pro);}
+  .resolved-tag{font-size:11px; color:var(--success); font-weight:600;}
+  .comment-actions{margin-left:auto; display:flex; gap:4px;}
+  .comment p{font-size:13px; line-height:1.5;}
+  .mini-btn{width:26px; height:26px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px;}
+  .mini-btn:disabled{opacity:.35; cursor:not-allowed;}
+  .mini-btn:hover:not(:disabled){background:var(--paper);}
+  .reopen-comments-btn{position:absolute; top:16px; right:16px; background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:var(--font); z-index:5;}
+  .modal-overlay{position:fixed; inset:0; background:rgba(10,11,13,.5); display:flex; align-items:center; justify-content:center; z-index:50;}
+  .modal-box{background:#fff; border-radius:12px; padding:24px 26px; width:100%; max-width:380px;}
+  .modal-box h2{font-size:16px; font-weight:600; margin-bottom:14px;}
+  .modal-box label{display:block; font-size:12.5px; font-weight:600; margin-bottom:6px;}
+  .modal-box input{width:100%; padding:9px 11px; font-size:13px; border:1px solid var(--line); border-radius:8px; margin-bottom:14px; font-family:var(--font);}
+  .modal-actions{display:flex; gap:8px; justify-content:flex-end;}
+  .toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--panel); color:#fff; font-size:12.5px; padding:9px 16px; border-radius:8px; z-index:60; opacity:0; pointer-events:none; transition:opacity .2s;}
+  .toast.show{opacity:1;}
+  .login-wrap{max-width:360px; margin:120px auto; text-align:center;}
+  .login-wrap h1{font-size:19px; margin-bottom:10px;}
+  .login-wrap p{font-size:13.5px; color:var(--ink-soft); margin-bottom:22px; line-height:1.5;}
+  .unavailable{max-width:420px; margin:100px auto; text-align:center;}
+  .unavailable .icon{width:44px; height:44px; border-radius:50%; background:var(--danger-soft); color:var(--danger); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:19px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button class="icon-btn hidden" id="back-btn">&larr;</button>
+  <span class="crumb" id="crumb">Revisão de protótipos</span>
+  <div id="topbar-right" style="margin-left:auto; display:flex; gap:8px;"></div>
+</div>
+<div class="page" id="page"><p style="color:var(--ink-soft); font-size:13px;">A carregar...</p></div>
+<div id="modal-root"></div>
+<div class="toast" id="toast"></div>
+ 
+<script>
+  const SUPABASE_URL = 'https://xatulphpgychgztxsukw.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhdHVscGhwZ3ljaGd6dHhzdWt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3ODM3NzcsImV4cCI6MjA5OTM1OTc3N30.2Baagi4c5FuwojTls-M6PC0xozxtvHURbQ9ZiAWSVRw';
+  const FIGMA_CLIENT_ID = 'pYHM3T2GqInUirsFcjG9y5';
+ 
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+ 
+  const state = {
+    screen: 'loading',
+    session: null,
+    currentProjectId: null,
+    currentPresentationId: null,
+    projects: [],
+    presentations: [],
+    presentation: null,
+    comments: [],
+    commentsVisible: true,
+    commentMode: false,
+    currentNodeId: null,
+    realtimeChannel: null
+  };
+ 
+  function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  function isEquipa(){ return !!state.session; }
+ 
+  // ---------- Arranque ----------
+  async function boot(){
+    const { data } = await sb.auth.getSession();
+    state.session = data.session;
+    sb.auth.onAuthStateChange((_event, session) => { state.session = session; });
+ 
+    const params = new URLSearchParams(window.location.search);
+    const apresentacaoId = params.get('apresentacao');
+ 
+    if(apresentacaoId){
+      await openReview(apresentacaoId);
+      return;
+    }
+    if(!state.session){
+      state.screen = 'login';
+    }else{
+      state.screen = 'projects';
+      await loadProjects();
+    }
+    render();
+  }
+ 
+  // ---------- Autenticação ----------
+  async function loginWithGithub(){
+    await sb.auth.signInWithOAuth({
+      provider: 'github',
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+  }
+  async function logout(){
+    await sb.auth.signOut();
+    state.session = null;
+    state.screen = 'login';
+    render();
+  }
+ 
+  // ---------- Projetos ----------
+  async function loadProjects(){
+    const { data, error } = await sb.from('projects').select('*, presentations(id)').order('created_at');
+    if(error){ showToast('Erro a carregar projetos'); return; }
+    state.projects = data || [];
+  }
+  async function openProject(id){
+    state.currentProjectId = id;
+    state.screen = 'detail';
+    const { data, error } = await sb.from('presentations').select('*').eq('project_id', id).order('created_at');
+    if(error){ showToast('Erro a carregar apresentações'); return; }
+    state.presentations = data || [];
+    render();
+  }
+  function currentProject(){ return state.projects.find(p => p.id === state.currentProjectId); }
+ 
+  const COLOR_OPTIONS = ['#2f6fed', '#7c4dff', '#1a9e6b', '#e08a1e', '#c0392b', '#0d9488'];
+  function colorSwatches(selected){
+    return COLOR_OPTIONS.map(c => `<button type="button" onclick="selectSwatch('${c}')" data-swatch="${c}" style="width:26px;height:26px;border-radius:50%;background:${c};border:2px solid ${c===selected?'#000':'transparent'};cursor:pointer;margin-right:6px;"></button>`).join('');
+  }
+  function selectSwatch(color){
+    document.getElementById('project-color-input').value = color;
+    document.querySelectorAll('[data-swatch]').forEach(el => { el.style.borderColor = el.getAttribute('data-swatch') === color ? '#000' : 'transparent'; });
+  }
+  function openProjectModal(id){
+    const project = id ? state.projects.find(p => p.id === id) : null;
+    const name = project ? project.name : '';
+    const color = project ? project.color : COLOR_OPTIONS[0];
+    const deleteBtn = project ? `<button class="btn-ghost" style="color:var(--danger);" onclick="deleteProject('${project.id}')">Eliminar projeto</button>` : '';
+    document.getElementById('modal-root').innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+        <div class="modal-box">
+          <h2>${project ? 'Configurar projeto' : 'Criar projeto'}</h2>
+          <label for="project-name-input">Nome do projeto</label>
+          <input type="text" id="project-name-input" value="${esc(name)}" placeholder="Nome do cliente">
+          <label>Cor do ícone</label>
+          <input type="hidden" id="project-color-input" value="${color}">
+          <div style="margin-bottom:16px;">${colorSwatches(color)}</div>
+          <div class="modal-actions">${deleteBtn}
+            <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
+            <button class="btn" onclick="submitProjectModal(${project ? `'${project.id}'` : 'null'})">${project ? 'Guardar' : 'Criar'}</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  function closeModal(){ document.getElementById('modal-root').innerHTML = ''; }
+  async function submitProjectModal(id){
+    const name = document.getElementById('project-name-input').value.trim();
+    const color = document.getElementById('project-color-input').value;
+    if(!name){ showToast('Dê um nome ao projeto antes de continuar'); return; }
+    if(id){
+      const { error } = await sb.from('projects').update({ name, color }).eq('id', id);
+      if(error){ showToast('Sem permissão ou erro ao guardar'); return; }
+      showToast('Projeto actualizado');
+    }else{
+      const { error } = await sb.from('projects').insert({ name, color });
+      if(error){ showToast('Sem permissão ou erro ao criar'); return; }
+      showToast('Projeto criado');
+    }
+    closeModal();
+    await loadProjects();
+    render();
+  }
+  async function deleteProject(id){
+    if(!confirm('Eliminar este projeto e todas as suas apresentações e comentários?')) return;
+    const { error } = await sb.from('projects').delete().eq('id', id);
+    if(error){ showToast('Erro ao eliminar'); return; }
+    closeModal();
+    state.screen = 'projects';
+    await loadProjects();
+    render();
+    showToast('Projeto eliminado');
+  }
+ 
+  // ---------- Apresentações ----------
+  function copyLink(id){
+    const base = window.location.origin + window.location.pathname;
+    const link = `${base}?apresentacao=${id}`;
+    navigator.clipboard?.writeText(link);
+    showToast('Link copiado, pronto a enviar ao cliente');
+  }
+  function openCreateModal(){
+    document.getElementById('modal-root').innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+        <div class="modal-box">
+          <h2>Criar apresentação</h2>
+          <label for="new-name">Nome da apresentação</label>
+          <input type="text" id="new-name" placeholder="Homepage, versão 3">
+          <label for="new-link">Link de apresentação do Figma</label>
+          <input type="text" id="new-link" placeholder="https://www.figma.com/proto/...">
+          <div class="modal-actions">
+            <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
+            <button class="btn" onclick="submitCreatePresentation()">Criar</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  async function submitCreatePresentation(){
+    const name = document.getElementById('new-name').value.trim();
+    const link = document.getElementById('new-link').value.trim();
+    if(!name || !link){ showToast('Preencha o nome e o link antes de criar'); return; }
+    const { error } = await sb.from('presentations').insert({ project_id: state.currentProjectId, name, figma_link: link, status: 'ativo' });
+    if(error){ showToast('Sem permissão ou erro ao criar'); return; }
+    closeModal();
+    await openProject(state.currentProjectId);
+    showToast('Apresentação criada');
+  }
+  async function toggleStatus(id){
+    const pr = state.presentations.find(p => p.id === id);
+    const newStatus = pr.status === 'ativo' ? 'inativo' : 'ativo';
+    const { error } = await sb.from('presentations').update({ status: newStatus }).eq('id', id);
+    if(error){ showToast('Erro ao actualizar estado'); return; }
+    await openProject(state.currentProjectId);
+  }
+  async function deletePresentation(id){
+    if(!confirm('Eliminar esta apresentação e todos os seus comentários?')) return;
+    const { error } = await sb.from('presentations').delete().eq('id', id);
+    if(error){ showToast('Erro ao eliminar'); return; }
+    await openProject(state.currentProjectId);
+  }
+ 
+  // ---------- Revisão ----------
+  function toEmbedUrl(rawLink){
+    try{
+      const u = new URL(rawLink);
+      u.hostname = 'embed.figma.com';
+      u.searchParams.set('client-id', FIGMA_CLIENT_ID);
+      u.searchParams.set('embed-host', 'revisao-prototipos');
+      return u.toString();
+    }catch(e){ return null; }
+  }
+  async function openReview(presentationId){
+    state.currentPresentationId = presentationId;
+    state.commentsVisible = true;
+    state.currentNodeId = null;
+    const { data: pres, error } = await sb.from('presentations').select('*, projects(name)').eq('id', presentationId).single();
+    if(error || !pres){ state.screen = 'not-found'; render(); return; }
+    state.presentation = pres;
+    state.screen = 'review';
+    await loadComments();
+    subscribeComments();
+    render();
+  }
+  async function loadComments(){
+    const { data, error } = await sb.from('comments').select('*').eq('presentation_id', state.currentPresentationId).order('created_at');
+    if(!error) state.comments = data || [];
+  }
+  function subscribeComments(){
+    if(state.realtimeChannel){ sb.removeChannel(state.realtimeChannel); }
+    state.realtimeChannel = sb.channel('comments-' + state.currentPresentationId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `presentation_id=eq.${state.currentPresentationId}` },
+        async () => { await loadComments(); renderReview(); })
+      .subscribe();
+  }
+  window.addEventListener('message', (event) => {
+    if(event.origin !== 'https://www.figma.com') return;
+    const data = event.data || {};
+    if(data.type === 'PRESENTED_NODE_CHANGED' && data.data){
+      state.currentNodeId = data.data.presentedNodeId || null;
+      closeAnyPopover();
+      renderReview();
+    }
+  });
+  function toggleCommentsPanel(){ state.commentsVisible = !state.commentsVisible; renderReview(); }
+  function toggleCommentMode(){ state.commentMode = !state.commentMode; renderReview(); }
+  function closeAnyPopover(){ const el = document.querySelector('.popover'); if(el) el.remove(); }
+ 
+  function placeComment(ev){
+    if(!state.commentMode) return;
+    const rect = ev.currentTarget.getBoundingClientRect();
+    const xPct = ((ev.clientX - rect.left) / rect.width) * 100;
+    const yPct = ((ev.clientY - rect.top) / rect.height) * 100;
+    const pxX = ev.clientX - rect.left;
+    const pxY = ev.clientY - rect.top;
+    state.commentMode = false;
+    renderReview();
+    const layer = document.getElementById('comment-layer');
+    const pop = document.createElement('div');
+    pop.className = 'popover';
+    pop.style.left = Math.min(pxX, layer.clientWidth - 260) + 'px';
+    pop.style.top = Math.min(pxY, layer.clientHeight - 140) + 'px';
+    pop.innerHTML = `<textarea placeholder="Escreva o seu comentário..."></textarea><div class="row"><button class="cancel">Cancelar</button><button class="save">Guardar</button></div>`;
+    layer.appendChild(pop);
+    const ta = pop.querySelector('textarea'); ta.focus();
+    pop.querySelector('.cancel').onclick = () => pop.remove();
+    pop.querySelector('.save').onclick = async () => {
+      const text = ta.value.trim();
+      if(!text){ pop.remove(); return; }
+      const author = isEquipa() ? 'equipa' : 'cliente';
+      const { error } = await sb.from('comments').insert({
+        presentation_id: state.currentPresentationId, author, text, x: xPct, y: yPct, screen_name: state.currentNodeId
+      });
+      pop.remove();
+      if(error){ showToast('Sem permissão para comentar'); return; }
+      await loadComments();
+      renderReview();
+    };
+  }
+  async function toggleResolved(id){
+    const c = state.comments.find(x => x.id === id);
+    const { error } = await sb.from('comments').update({ resolved: !c.resolved }).eq('id', id);
+    if(error){ showToast('Sem permissão'); return; }
+    await loadComments();
+    renderReview();
+  }
+  async function deleteComment(id){
+    const { error } = await sb.from('comments').delete().eq('id', id);
+    if(error){ showToast('Sem permissão para apagar este comentário'); return; }
+    await loadComments();
+    renderReview();
+  }
+ 
+  // ---------- Render ----------
+  function render(){
+    const backBtn = document.getElementById('back-btn');
+    const crumb = document.getElementById('crumb');
+    const topRight = document.getElementById('topbar-right');
+    backBtn.classList.add('hidden');
+    backBtn.onclick = null;
+    topRight.innerHTML = '';
+ 
+    if(state.screen === 'login'){ crumb.textContent = 'Revisão de protótipos'; renderLogin(); return; }
+    if(state.screen === 'not-found'){ crumb.textContent = 'Revisão de protótipos'; renderNotFound(); return; }
+ 
+    if(state.screen === 'projects'){
+      crumb.textContent = 'Revisão de protótipos';
+      topRight.innerHTML = `<button class="icon-btn" title="Terminar sessão" onclick="logout()">&#9211;</button>`;
+      renderProjects();
+    }
+    if(state.screen === 'detail'){
+      const project = currentProject();
+      backBtn.classList.remove('hidden');
+      backBtn.onclick = () => { state.screen = 'projects'; render(); };
+      crumb.innerHTML = 'Revisão de protótipos &rsaquo; <b>' + esc(project ? project.name : '') + '</b>';
+      topRight.innerHTML = `<button class="icon-btn" title="Terminar sessão" onclick="logout()">&#9211;</button>`;
+      renderDetail();
+    }
+    if(state.screen === 'review'){
+      if(isEquipa()){
+        backBtn.classList.remove('hidden');
+        backBtn.onclick = () => { state.screen = 'detail'; render(); };
+      }
+      const p = state.presentation;
+      crumb.innerHTML = 'Revisão de protótipos &rsaquo; ' + esc(p?.projects?.name || '') + ' &rsaquo; <b>' + esc(p?.name || '') + '</b>';
+      renderReview();
+    }
+  }
+ 
+  function renderLogin(){
+    document.getElementById('page').innerHTML = `
+      <div class="login-wrap">
+        <h1>Painel da equipa</h1>
+        <p>Inicie sessão com a sua conta GitHub da empresa para gerir os projetos e apresentações.</p>
+        <button class="btn" onclick="loginWithGithub()">Iniciar sessão com o GitHub</button>
+      </div>`;
+  }
+  function renderNotFound(){
+    document.getElementById('page').innerHTML = `
+      <div class="unavailable">
+        <div class="icon">&#33;</div>
+        <h2 style="font-size:16px;font-weight:600;margin-bottom:8px;">Esta apresentação não foi encontrada</h2>
+        <p style="font-size:13.5px;color:var(--ink-soft);">Verifique o link recebido ou contacte a equipa responsável.</p>
+      </div>`;
+  }
+ 
+  function renderProjects(){
+    let cards = state.projects.map(p => `
+      <div class="project-card" onclick="openProject('${p.id}')">
+        <div class="project-icon" style="background:${p.color}22; color:${p.color};">${esc(p.name.charAt(0))}</div>
+        <div class="name">${esc(p.name)}</div>
+        <div class="meta">${(p.presentations || []).length} apresentação(ões)</div>
+      </div>`).join('');
+    cards += `<div class="project-card new" onclick="openProjectModal(null)">+ Novo projeto</div>`;
+    document.getElementById('page').innerHTML = `
+      <div class="page-header"><h1>Projetos</h1></div>
+      <div class="card-grid">${cards}</div>`;
+  }
+ 
+  function renderDetail(){
+    const project = currentProject();
+    const rows = state.presentations.map(pr => {
+      const statusClass = pr.status === 'ativo' ? 'status-active' : 'status-inactive';
+      const rowClass = pr.status === 'inativo' ? 'row-inactive' : '';
+      return `<tr class="${rowClass}">
+        <td>${esc(pr.name)}</td>
+        <td>${new Date(pr.created_at).toLocaleDateString('pt-PT')}</td>
+        <td><span class="status-pill ${statusClass}">${pr.status}</span></td>
+        <td><div class="row-actions">
+          <button class="icon-btn on-light" title="Copiar link de apresentação" onclick="copyLink('${pr.id}')">&#128279;</button>
+          <button class="icon-btn on-light" title="Aceder ao protótipo" onclick="openReview('${pr.id}')">&#8599;</button>
+          <button class="icon-btn on-light" title="Alternar estado" onclick="toggleStatus('${pr.id}')">&#8635;</button>
+          <button class="icon-btn on-light" title="Eliminar" onclick="deletePresentation('${pr.id}')">&#128465;</button>
+        </div></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('page').innerHTML = `
+      <div class="page-header"><h1>${esc(project ? project.name : '')}</h1>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-ghost" onclick="openProjectModal('${project.id}')">Configurar projeto</button>
+          <button class="btn" onclick="openCreateModal()">+ Criar apresentação</button>
+        </div>
+      </div>
+      <table><thead><tr><th>Nome</th><th>Data de criação</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="4" style="color:var(--ink-soft);">Ainda não existem apresentações.</td></tr>'}</tbody></table>`;
+  }
+ 
+  function renderReview(){
+    const p = state.presentation;
+    if(p.status === 'inativo' && !isEquipa()){
+      document.getElementById('page').innerHTML = `
+        <div class="unavailable">
+          <div class="icon">&#33;</div>
+          <h2 style="font-size:16px;font-weight:600;margin-bottom:8px;">Esta apresentação já não está disponível</h2>
+          <p style="font-size:13.5px;color:var(--ink-soft);">Contacte a equipa responsável para saber mais.</p>
+        </div>`;
+      return;
+    }
+    const embedUrl = toEmbedUrl(p.figma_link);
+    const list = state.comments.filter(c => (c.screen_name || null) === (state.currentNodeId || null));
+    const pins = list.map((c, i) => `<div class="pin" style="left:${c.x}%; top:${c.y}%;" onclick="openReadPopover(${JSON.stringify(c.id)}, event)"><span>${i+1}</span></div>`).join('');
+    const commentsHtml = list.map(c => {
+      const badgeClass = c.author === 'cliente' ? 'badge-cliente' : 'badge-equipa';
+      const badgeLabel = c.author === 'cliente' ? 'Cliente' : 'Equipa';
+      const canDelete = (c.author === 'equipa' && isEquipa()) || (c.author === 'cliente' && !isEquipa());
+      const resolveBtn = isEquipa() ? `<button class="mini-btn" title="Marcar como resolvido" onclick="toggleResolved('${c.id}')">&#10003;</button>` : '';
+      return `<div class="comment${c.resolved ? ' resolved' : ''}">
+        <div class="comment-head">
+          <span class="badge ${badgeClass}">${badgeLabel}</span>
+          ${c.resolved ? '<span class="resolved-tag">&#10003; Resolvido</span>' : ''}
+          <span class="comment-actions">${resolveBtn}
+            <button class="mini-btn" title="Apagar" ${canDelete ? '' : 'disabled'} onclick="deleteComment('${c.id}')">&#128465;</button>
+          </span>
+        </div>
+        <p>${esc(c.text)}</p>
+      </div>`;
+    }).join('') || '<p style="font-size:13px;color:var(--ink-soft);">Ainda não há comentários neste ecrã.</p>';
+    const reopenBtn = state.commentsVisible ? '' : `<button class="reopen-comments-btn" onclick="toggleCommentsPanel()">&#128172; Mostrar comentários</button>`;
+ 
+    document.getElementById('page').innerHTML = `
+      <div style="display:flex;align-items:center;margin-bottom:12px;">
+        <button class="btn-ghost" style="${state.commentMode ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : ''}" onclick="toggleCommentMode()">${state.commentMode ? 'Clique no protótipo...' : '+ Fazer comentário'}</button>
+      </div>
+      <div class="review-grid${state.commentsVisible ? '' : ' comments-hidden'}">
+        <div class="proto-wrap">
+          <iframe id="proto-frame" src="${embedUrl || ''}" allowfullscreen></iframe>
+          <div id="comment-layer" class="comment-layer${state.commentMode ? ' commenting' : ''}" onclick="placeComment(event)">${pins}</div>
+          ${reopenBtn}
+        </div>
+        <div class="comments-col">
+          <div class="comments-col-header"><span>Comentários</span><button class="icon-btn on-light" title="Ocultar comentários" onclick="toggleCommentsPanel()">&#10005;</button></div>
+          ${commentsHtml}
+        </div>
+      </div>`;
+  }
+  function openReadPopover(id, ev){ ev.stopPropagation(); }
+ 
+  boot();
+</script>
+</body>
+</html>
+ 
