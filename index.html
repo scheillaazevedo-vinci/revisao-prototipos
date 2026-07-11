@@ -320,7 +320,7 @@
     if(state.realtimeChannel){ sb.removeChannel(state.realtimeChannel); }
     state.realtimeChannel = sb.channel('comments-' + state.currentPresentationId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `presentation_id=eq.${state.currentPresentationId}` },
-        async () => { await loadComments(); renderReview(); })
+        async () => { await loadComments(); updateReviewDynamic(); })
       .subscribe();
   }
   window.addEventListener('message', (event) => {
@@ -329,11 +329,11 @@
     if(data.type === 'PRESENTED_NODE_CHANGED' && data.data){
       state.currentNodeId = data.data.presentedNodeId || null;
       closeAnyPopover();
-      renderReview();
+      updateReviewDynamic();
     }
   });
-  function toggleCommentsPanel(){ state.commentsVisible = !state.commentsVisible; renderReview(); }
-  function toggleCommentMode(){ state.commentMode = !state.commentMode; renderReview(); }
+  function toggleCommentsPanel(){ state.commentsVisible = !state.commentsVisible; updateReviewDynamic(); }
+  function toggleCommentMode(){ state.commentMode = !state.commentMode; updateReviewDynamic(); }
   function closeAnyPopover(){ const el = document.querySelector('.popover'); if(el) el.remove(); }
  
   function placeComment(ev){
@@ -344,7 +344,7 @@
     const pxX = ev.clientX - rect.left;
     const pxY = ev.clientY - rect.top;
     state.commentMode = false;
-    renderReview();
+    updateReviewDynamic();
     const layer = document.getElementById('comment-layer');
     const pop = document.createElement('div');
     pop.className = 'popover';
@@ -364,7 +364,7 @@
       pop.remove();
       if(error){ showToast('Sem permissão para comentar'); return; }
       await loadComments();
-      renderReview();
+      updateReviewDynamic();
     };
   }
   async function toggleResolved(id){
@@ -372,13 +372,13 @@
     const { error } = await sb.from('comments').update({ resolved: !c.resolved }).eq('id', id);
     if(error){ showToast('Sem permissão'); return; }
     await loadComments();
-    renderReview();
+    updateReviewDynamic();
   }
   async function deleteComment(id){
     const { error } = await sb.from('comments').delete().eq('id', id);
     if(error){ showToast('Sem permissão para apagar este comentário'); return; }
     await loadComments();
-    renderReview();
+    updateReviewDynamic();
   }
  
   // ---------- Render ----------
@@ -486,9 +486,42 @@
         </div>`;
       return;
     }
+    const existingFrame = document.getElementById('proto-frame');
+    const needsFullRender = !existingFrame || existingFrame.dataset.presentationId !== state.currentPresentationId;
+    if(needsFullRender){
+      renderReviewSkeleton();
+    }
+    updateReviewDynamic();
+  }
+ 
+  function renderReviewSkeleton(){
+    const p = state.presentation;
     const embedUrl = toEmbedUrl(p.figma_link);
+    document.getElementById('page').innerHTML = `
+      <div style="display:flex;align-items:center;margin-bottom:12px;">
+        <button class="btn-ghost" id="comment-mode-btn" onclick="toggleCommentMode()">+ Fazer comentário</button>
+      </div>
+      <div class="review-grid" id="review-grid">
+        <div class="proto-wrap">
+          <iframe id="proto-frame" credentialless data-presentation-id="${state.currentPresentationId}" src="${embedUrl || ''}" allowfullscreen></iframe>
+          <div id="comment-layer" class="comment-layer" onclick="placeComment(event)"></div>
+          <div id="reopen-btn-wrap"></div>
+        </div>
+        <div class="comments-col" id="comments-col">
+          <div class="comments-col-header"><span>Comentários</span><button class="icon-btn on-light" title="Ocultar comentários" onclick="toggleCommentsPanel()">&#10005;</button></div>
+          <div id="comments-list"></div>
+        </div>
+      </div>`;
+  }
+ 
+  function updateReviewDynamic(){
     const list = state.comments.filter(c => (c.screen_name || null) === (state.currentNodeId || null));
-    const pins = list.map((c, i) => `<div class="pin" style="left:${c.x}%; top:${c.y}%;" onclick="openReadPopover(${JSON.stringify(c.id)}, event)"><span>${i+1}</span></div>`).join('');
+ 
+    const pinsHtml = list.map((c, i) => `<div class="pin" style="left:${c.x}%; top:${c.y}%;"><span>${i+1}</span></div>`).join('');
+    const layer = document.getElementById('comment-layer');
+    layer.innerHTML = pinsHtml;
+    layer.classList.toggle('commenting', state.commentMode);
+ 
     const commentsHtml = list.map(c => {
       const badgeClass = c.author === 'cliente' ? 'badge-cliente' : 'badge-equipa';
       const badgeLabel = c.author === 'cliente' ? 'Cliente' : 'Equipa';
@@ -505,23 +538,17 @@
         <p>${esc(c.text)}</p>
       </div>`;
     }).join('') || '<p style="font-size:13px;color:var(--ink-soft);">Ainda não há comentários neste ecrã.</p>';
-    const reopenBtn = state.commentsVisible ? '' : `<button class="reopen-comments-btn" onclick="toggleCommentsPanel()">&#128172; Mostrar comentários</button>`;
+    document.getElementById('comments-list').innerHTML = commentsHtml;
  
-    document.getElementById('page').innerHTML = `
-      <div style="display:flex;align-items:center;margin-bottom:12px;">
-        <button class="btn-ghost" style="${state.commentMode ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : ''}" onclick="toggleCommentMode()">${state.commentMode ? 'Clique no protótipo...' : '+ Fazer comentário'}</button>
-      </div>
-      <div class="review-grid${state.commentsVisible ? '' : ' comments-hidden'}">
-        <div class="proto-wrap">
-          <iframe id="proto-frame" src="${embedUrl || ''}" allowfullscreen></iframe>
-          <div id="comment-layer" class="comment-layer${state.commentMode ? ' commenting' : ''}" onclick="placeComment(event)">${pins}</div>
-          ${reopenBtn}
-        </div>
-        <div class="comments-col">
-          <div class="comments-col-header"><span>Comentários</span><button class="icon-btn on-light" title="Ocultar comentários" onclick="toggleCommentsPanel()">&#10005;</button></div>
-          ${commentsHtml}
-        </div>
-      </div>`;
+    const btn = document.getElementById('comment-mode-btn');
+    btn.textContent = state.commentMode ? 'Clique no protótipo...' : '+ Fazer comentário';
+    btn.style.cssText = state.commentMode ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : '';
+ 
+    document.getElementById('review-grid').classList.toggle('comments-hidden', !state.commentsVisible);
+ 
+    document.getElementById('reopen-btn-wrap').innerHTML = state.commentsVisible
+      ? ''
+      : `<button class="reopen-comments-btn" onclick="toggleCommentsPanel()">&#128172; Mostrar comentários</button>`;
   }
   function openReadPopover(id, ev){ ev.stopPropagation(); }
  
